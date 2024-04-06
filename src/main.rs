@@ -6,7 +6,7 @@ use actix_files::Files;
 async fn main() -> Result<()> {
     HttpServer::new(|| {
         App::new()
-            .service(Files::new("/", "./frontend/dist").index_file("index.html").prefer_utf8(true))
+            .service(Files::new("/{tail:.*}", "./frontend/dist").index_file("index.html").prefer_utf8(true))
     }).bind(("localhost", 3000))?.run().await?;
     Ok(())
 }
