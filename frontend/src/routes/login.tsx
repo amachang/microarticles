@@ -1,3 +1,4 @@
+import { UnreachableCaseError } from 'ts-essentials';
 import api from '../api';
 import { redirect, Form } from 'react-router-dom'
 
@@ -16,23 +17,26 @@ export async function action({ request }: { request: Request }): Promise<Respons
   const username = data.get('username') as string;
 
   const info = await api.auth.start(username);
-  if (info.kind === 'registration') {
-    const credential = await navigator.credentials.create(info.credentialCreationOptions);
-    if (credential === null) {
-      throw new Error('Failed to create credential');
+  switch (info.kind) {
+    case 'registration': {
+      const credential = await navigator.credentials.create(info.credentialCreationOptions);
+      if (credential === null) {
+        throw new Error('Failed to create credential');
+      }
+      await api.auth.register(username, credential);
+      break;
     }
-    await api.auth.register(username, credential);
-  }
-  else if (info.kind === 'auhentication') {
-    const credential = await navigator.credentials.get(info.credentialRequestOptions);
-    if (credential === null) {
-      throw new Error('Failed to get credential');
+    case 'auhentication': {
+      const credential = await navigator.credentials.get(info.credentialRequestOptions);
+      if (credential === null) {
+        throw new Error('Failed to get credential');
+      }
+      await api.auth.login(username, credential);
+      break;
     }
-    await api.auth.login(username, credential);
-  }
-  else {
-    // TODO how to use assert with browser typescript? proper way
-    throw new Error('Unknown kind');
+    default: {
+      throw new UnreachableCaseError(info);
+    }
   }
   return redirect(`/${username}`);
 }
