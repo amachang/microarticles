@@ -1,11 +1,8 @@
-import { redirect } from 'react-router-dom'
+import api from '../api';
+import { redirect, Form } from 'react-router-dom'
 
 export async function loader(): Promise<Response | null> {
-  const res = await fetch('/api/auth/username', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-  if (!res.ok) {
-    return res;
-  }
-  const username = await res.json();
+  const username = await api.auth.username();
   if (username === null) {
     return null;
   }
@@ -14,20 +11,38 @@ export async function loader(): Promise<Response | null> {
   }
 }
 
-export default function Login(): JSX.Element {
+export async function action({ request }: { request: Request }): Promise<Response> {
+  const data = await request.formData();
+  const username = data.get('username') as string;
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const username = data.get('username') as string;
-    console.log('username:', username);
+  const info = await api.auth.start(username);
+  if (info.kind === 'registration') {
+    const credential = await navigator.credentials.create(info.credentialCreationOptions);
+    if (credential === null) {
+      throw new Error('Failed to create credential');
+    }
+    await api.auth.register(username, credential);
   }
+  else if (info.kind === 'auhentication') {
+    const credential = await navigator.credentials.get(info.credentialRequestOptions);
+    if (credential === null) {
+      throw new Error('Failed to get credential');
+    }
+    await api.auth.login(username, credential);
+  }
+  else {
+    // TODO how to use assert with browser typescript? proper way
+    throw new Error('Unknown kind');
+  }
+  return redirect(`/${username}`);
+}
 
+export default function Login(): JSX.Element {
   return (
-    <form onSubmit={handleSubmit}>
-      <h1>Your URL</h1>
-      <label>{location.hostname}/<input type="text" name="username" required minLength={1} maxLength={64} pattern="[\w\-]{1,64}" /></label>
-      <button type="submit">Continue</button>
-    </form>
+      <Form method="post">
+        <h1>Your URL</h1>
+        <label>{location.hostname}/<input type="text" name="username" required minLength={1} maxLength={64} pattern="[\w\-]{1,64}" /></label>
+        <button type="submit">Continue</button>
+      </Form>
   );
 }
