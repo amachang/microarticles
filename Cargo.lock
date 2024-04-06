@@ -741,6 +741,7 @@ dependencies = [
  "actix-files",
  "actix-web",
  "anyhow",
+ "serde_json",
  "tokio",
 ]
 
