@@ -26,7 +26,7 @@ export async function action({ request }: { request: Request }): Promise<Respons
       await api.auth.register(credential);
       break;
     }
-    case 'auhentication': {
+    case 'authentication': {
       const credential = await navigator.credentials.get(info.credentialOptions);
       if (credential === null) {
         throw new Error('Failed to get credential');

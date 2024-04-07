@@ -75,29 +75,33 @@ pub async fn start(session: Session, webauthn: web::Data<Webauthn>, username: we
     // TODO user entity from database
     let user_id: Option<Uuid> = session.get(&format!("user_id_for_username({})", username))?;
 
-    let (res, auth_state) = if let Some(user_id) = user_id {
+    let (user_id, res, auth_state) = if let Some(user_id) = user_id {
         // TODO passkey enitiies from database
         let passkeys: Option<Vec<Passkey>> = session.get(&format!("passkeys_for_user_id({})", user_id))?;
         let Some(passkeys) = passkeys else {
             return Err(Error::UserFoundButNoPasskeys.into());
         };
         let (rcr, auth_state) = webauthn.start_passkey_authentication(&passkeys)?;
-        (ChallengeResponse::Authentication(rcr), AuthState::Authentication(auth_state))
+        (user_id, ChallengeResponse::Authentication(rcr), AuthState::Authentication(auth_state))
     } else {
         let user_id = Uuid::new_v4();
-        let (ccr, auth_state) = webauthn.start_passkey_registration(user_id, &username, &username, None)?;
-        (ChallengeResponse::Registration(ccr), AuthState::Registration(auth_state))
+        let (ccr, auth_state) = webauthn.start_passkey_registration(user_id.clone(), &username, &username, None)?;
+        (user_id, ChallengeResponse::Registration(ccr), AuthState::Registration(auth_state))
     };
 
-    session.insert("auth_state", (user_id, username, auth_state))?;
+    let auth_state: (Uuid, String, AuthState) = (user_id, username, auth_state);
+    session.insert("auth_state", auth_state)?;
     Ok(web::Json(res))
 }
 
 pub async fn register(session: Session, req: web::Json<RegisterPublicKeyCredential>, webauthn: web::Data<Webauthn>) -> Result<HttpResponse, Error> {
-    let (user_id, username, reg_state): (Uuid, String, PasskeyRegistration) = match session.remove_as("auth_state") {
+    let (user_id, username, auth_state): (Uuid, String, AuthState) = match session.remove_as("auth_state") {
         None => return Err(Error::AuthNotStarted),
         Some(Err(_)) => return Err(Error::AuthStateInvalid),
         Some(Ok(val)) => val,
+    };
+    let AuthState::Registration(reg_state) = auth_state else {
+        return Err(Error::AuthStateInvalid);
     };
 
     let passkey = webauthn.finish_passkey_registration(&req, &reg_state)?;
@@ -111,10 +115,13 @@ pub async fn register(session: Session, req: web::Json<RegisterPublicKeyCredenti
 }
 
 pub async fn login(session: Session, req: web::Json<PublicKeyCredential>, webauthn: web::Data<Webauthn>) -> Result<HttpResponse, Error> {
-    let (user_id, username, auth_state): (Uuid, String, PasskeyAuthentication) = match session.remove_as("auth_state") {
+    let (user_id, username, auth_state): (Uuid, String, AuthState) = match session.remove_as("auth_state") {
         None => return Err(Error::AuthNotStarted),
         Some(Err(_)) => return Err(Error::AuthStateInvalid),
         Some(Ok(val)) => val,
+    };
+    let AuthState::Authentication(auth_state) = auth_state else {
+        return Err(Error::AuthStateInvalid);
     };
 
     let passkey = webauthn.finish_passkey_authentication(&req, &auth_state)?;

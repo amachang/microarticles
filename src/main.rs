@@ -17,6 +17,7 @@ async fn main() -> Result<()> {
     let hostname = "localhost";
     let port = 3000;
 
+    let key = cookie::Key::generate();
     HttpServer::new(move || {
         let rp_id = hostname;
         let rp_origin = Url::parse(&format!("http://{}:{}", hostname, port)).expect("hard coded");
@@ -24,7 +25,7 @@ async fn main() -> Result<()> {
 
         App::new()
             .wrap(
-                SessionMiddleware::builder(MemorySession, cookie::Key::generate())
+                SessionMiddleware::builder(MemorySession, key.clone())
                     .cookie_name("s".to_string())
                     .cookie_http_only(true)
                     .cookie_secure(false)
