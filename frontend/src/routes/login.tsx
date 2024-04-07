@@ -19,19 +19,19 @@ export async function action({ request }: { request: Request }): Promise<Respons
   const info = await api.auth.start(username);
   switch (info.kind) {
     case 'registration': {
-      const credential = await navigator.credentials.create(info.credentialCreationOptions);
+      const credential = await navigator.credentials.create(info.credentialOptions);
       if (credential === null) {
         throw new Error('Failed to create credential');
       }
-      await api.auth.register(username, credential);
+      await api.auth.register(credential);
       break;
     }
     case 'auhentication': {
-      const credential = await navigator.credentials.get(info.credentialRequestOptions);
+      const credential = await navigator.credentials.get(info.credentialOptions);
       if (credential === null) {
         throw new Error('Failed to get credential');
       }
-      await api.auth.login(username, credential);
+      await api.auth.login(credential);
       break;
     }
     default: {

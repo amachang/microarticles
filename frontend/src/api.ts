@@ -15,23 +15,23 @@ class AuthApi {
     return await res.json() as string | null;
   }
 
-  public async start(username: string): Promise<{ kind: 'registration', credentialCreationOptions: CredentialCreationOptions } | { kind: 'auhentication', credentialRequestOptions: CredentialRequestOptions }> {
+  public async start(username: string): Promise<{ kind: 'registration', credentialOptions: CredentialCreationOptions } | { kind: 'auhentication', credentialOptions: CredentialRequestOptions }> {
     const res = await fetch('/api/auth/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) });
     if (!res.ok) {
       throw new Error('Failed to start authentication');
     }
-    return await res.json() as { kind: 'registration', credentialCreationOptions: CredentialCreationOptions } | { kind: 'auhentication', credentialRequestOptions: CredentialRequestOptions };
+    return await res.json() as { kind: 'registration', credentialOptions: CredentialCreationOptions } | { kind: 'auhentication', credentialOptions: CredentialRequestOptions };
   }
 
-  public async register(username: string, credential: Credential): Promise<void> {
-    const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, credential }) });
+  public async register(credential: Credential): Promise<void> {
+    const res = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(credential) });
     if (!res.ok) {
       throw new Error('Failed to finish registration');
     }
   }
 
-  public async login(username: string, credential: Credential): Promise<void> {
-    const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, credential }) });
+  public async login(credential: Credential): Promise<void> {
+    const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(credential) });
     if (!res.ok) {
       throw new Error('Failed to finish authentication');
     }
