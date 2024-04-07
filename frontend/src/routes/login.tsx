@@ -1,6 +1,6 @@
 import { UnreachableCaseError } from 'ts-essentials';
 import api from '../api';
-import { redirect, Form } from 'react-router-dom'
+import { redirect, Form, useRouteError } from 'react-router-dom'
 
 export async function loader(): Promise<Response | null> {
   const username = await api.auth.username();
@@ -42,9 +42,12 @@ export async function action({ request }: { request: Request }): Promise<Respons
 }
 
 export default function Login(): JSX.Element {
+  const error = useRouteError() as { toString(): string } | null;
+
   return (
       <Form method="post">
         <h1>Your URL</h1>
+        {error && <p>{error.toString()}</p>}
         <label>{location.hostname}/<input type="text" name="username" required minLength={1} maxLength={64} pattern="[\w\-]{1,64}" /></label>
         <button type="submit">Continue</button>
       </Form>
